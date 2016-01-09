@@ -35,8 +35,10 @@ import supybot.ircmsgs as ircmsgs
 import supybot.callbacks as callbacks
 import supybot.ircutils as ircutils
 import supybot.ircdb as ircdb
+import supybot.log as log
 
 import re
+from sys import version_info
 
 try:
     from supybot.i18n import PluginInternationalization
@@ -44,9 +46,12 @@ try:
 except ImportError:
     _ = lambda x: x
 
-
-SED_REGEX = re.compile(r"^(?:(?P<nick>.+?)[:,] )?s(?P<delim>/)(?P<pattern>.*?)(?P=delim)"
-                       r"(?P<replacement>.*?)(?:(?P=delim)(?P<flags>[gi]*))?$")
+# This matches things like:
+#    nick: s/abcd/xyz/
+#    s/abcd/xyz/g
+#    nick, s/abcd/xyz/ig
+SED_REGEX = re.compile(r"^(?:(?P<nick>.+?)[:,]? )?s\/(?P<pattern>.*?)\/"
+                       r"(?P<replacement>.*?)\/(?P<flags>[gi]*)?$")
 
 class Replacer(callbacks.PluginRegexp):
     """History replacer using sed regex syntax."""
@@ -56,33 +61,37 @@ class Replacer(callbacks.PluginRegexp):
 
     @staticmethod
     def _unpack_sed(expr):
-        if '\0' in expr:
-            raise ValueError('Expression can\'t contain NUL')
+        """
+        Unpacks and returns the target string, replacement string, and
+        replacement count of a sed-style expression. If the "g" (global)
+        flag is given, then the replacement count is set to 0.
+        """
+        # Delimiter for sed-style expressions is usually a "/"
+        delim = '/'
 
-        delim = expr[1]
-        escaped_expr = ''
+        log.info("Replacer: source expression was: %s", expr)
 
-        for (i, c) in enumerate(expr):
-            if c == delim and i > 0:
-                if expr[i - 1] == '\\':
-                    escaped_expr = escaped_expr[:-1] + '\0'
-                    continue
+        #if version_info[0] >= 3:  # Python 3
+        #    expr = expr.encode("utf-8")
 
-            escaped_expr += c
+        # Unescape backslash-escaped characters.
+        #escaped_expr = expr.decode('unicode_escape')
+        escaped_expr = re.escape(expr)
 
+        log.info("Replacer: escaped expression was: %s", escaped_expr)
         match = SED_REGEX.search(escaped_expr)
 
-        if not match:
+        if not match:  # Didn't match the SED_REGEX, abort.
             return
 
+        # Turn the matches into a dict of named groups to data.
         groups = match.groupdict()
-        pattern = groups['pattern'].replace('\0', delim)
-        replacement = groups['replacement'].replace('\0', delim)
+        pattern = groups['pattern']
+        replacement = groups['replacement']
 
-        if groups['flags']:
-            raw_flags = set(groups['flags'])
-        else:
-            raw_flags = set()
+        # Get the replace expression flags, but leave it as an empty set if none
+        # were given.
+        raw_flags = set(groups['flags'] or ())
 
         flags = 0
         count = 1
@@ -120,10 +129,12 @@ class Replacer(callbacks.PluginRegexp):
                     return
                 if target and m.nick != target:
                     continue
+
                 # Don't snarf ignored users' messages unless specifically
                 # told to.
                 if ircdb.checkIgnored(m.prefix) and not target:
                     continue
+
                 # When running substitutions, ignore the "* nick" part of any actions.
                 action = ircmsgs.isAction(m)
                 if action:
