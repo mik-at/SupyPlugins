@@ -68,7 +68,7 @@ class WeatherDB():
             cursor.execute("""CREATE TABLE IF NOT EXISTS users (
                           nick TEXT PRIMARY KEY,
                           location TEXT NOT NULL,
-                          metric INTEGER DEFAULT 0,
+                          metric INTEGER DEFAULT 1,
                           alerts INTEGER DEFAULT 0,
                           almanac INTEGER DEFAULT 0,
                           astronomy INTEGER DEFAULT 0,
@@ -160,10 +160,10 @@ class Weather(callbacks.Plugin):
     ##############
 
     def _bold(self, string):
-        return ircutils.bold(string)
+        return string
 
     def _bu(self, string):
-        return ircutils.underline(ircutils.bold(string))
+        return string
 
     ############################
     # INTERNAL WEATHER HELPERS #
@@ -522,7 +522,7 @@ class Weather(callbacks.Plugin):
             tailstr = outdata['observation'].lstrip(string.digits + '.')
             updated_time = outdata['observation'].rstrip(string.ascii_letters + ' ')
             updated_time = round(float(updated_time))
-            output += " | Updated %s%s" % (ircutils.bold(updated_time), tailstr)
+            output += " | Updated %s%s" % (updated_time, tailstr)
 
         # finally, output the basic weather.
         irc.reply(output)
