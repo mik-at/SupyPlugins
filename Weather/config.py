@@ -21,7 +21,7 @@ Weather = conf.registerPlugin('Weather')
 conf.registerGlobalValue(Weather, 'apiKey',
     registry.String('', ("""Sets the API key for the plugin. You can obtain an API key at http://www.wunderground.com/weather/api/."""), private=True))
 conf.registerChannelValue(Weather, 'useImperial',
-    registry.Boolean(True, ("""Determines whether imperial units (Fahrenheit, etc.) will be used.""")))
+    registry.Boolean(False, ("""Determines whether imperial units (Fahrenheit, etc.) will be used.""")))
 conf.registerGlobalValue(Weather,'forecast',
     registry.Boolean(True, ("""Determines whether forecasts will be displayed by default.""")))
 conf.registerGlobalValue(Weather,'alerts',
@@ -39,6 +39,6 @@ conf.registerGlobalValue(Weather, 'showUpdated',
 conf.registerGlobalValue(Weather, 'lang',
     registry.String('EN', ("""Determines the language used by the plugin.""")))
 conf.registerChannelValue(Weather, 'disableColoredTemp',
-    registry.Boolean(False, """If True, this will disable coloring temperatures based on values."""))
+    registry.Boolean(True, """If True, this will disable coloring temperatures based on values."""))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=250:
